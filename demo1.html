@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapper</title>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.anychart.com/releases/8.1.0/js/graphics.min.js"></script>
+    <script src="js/mapper.js"></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 5px;
+
+        }
+
+        .inline {
+            float: left;
+            /*height: 80vh;*/
+            margin-right: 15px;
+        }
+
+        .main {
+            width: 55vw;
+            /*border: 1px solid red;*/
+            /*position: relative;*/
+        }
+
+        .zoom {
+            width: 40vw;
+            /*border: 1px solid green;*/
+            /*position: relative;*/
+        }
+
+        .container {
+            padding: 0;
+            overflow: hidden;
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            /*border: 1px solid blue;*/
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="btn-group" data-toggle="buttons">
+        <label class="btn btn-primary active">
+            <input type="radio" name="options" id="addPoints" autocomplete="off" checked> Добавление точек
+        </label>
+        <label class="btn btn-primary">
+            <input type="radio" name="options" id="scalePoints" autocomplete="off"> Масштабирование
+        </label>
+    </div>
+</div>
+
+<h4 id="title">Добавление точек</h4>
+
+<div class="inline main">
+
+    <div style="width: 100%; position: relative; display: flex">
+        <div id="imgContainer" class="container"></div>
+        <div id="interactiveContainer" class="container"></div>
+    </div>
+
+</div>
+
+<div class="inline zoom">
+    <div style="width: 100%; position: relative; display: flex">
+        <div id="zoomImgContainer" class="container"></div>
+        <div id="zoomInteractiveContainer" class="container"></div>
+    </div>
+</div>
+
+<script>
+      var mapper = new Mapper('map.png', 'imgContainer', 'interactiveContainer', 'zoomImgContainer', 'zoomInteractiveContainer');
+      mapper.load(function() {
+        $('#addPoints').change(function() {
+          mapper.addPoints(true);
+        });
+
+        $('#scalePoints').change(function() {
+          mapper.addPoints(false);
+        });
+      });
+</script>
+
+</body>
+</html>
