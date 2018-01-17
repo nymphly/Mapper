@@ -105,6 +105,13 @@ Mapper = function(url, imgContainer, drawContainer, zoomImgContainer, zoomDrawCo
 
   /**
    *
+   * @type {Array.<acgraph.vector.Path>}
+   * @private
+   */
+  this.zoomPathPoints_ = [];
+
+  /**
+   *
    * @type {acgraph.vector.Layer}
    * @private
    */
@@ -213,9 +220,7 @@ Mapper.prototype.clickListener_ = function(e) {
       xRatio: xRatio,
       yRatio: yRatio,
       originalX: Math.round(xRatio * this.originalImageWidth),
-      originalY: Math.round(yRatio * this.originalImageHeight),
-      scaledX: e.offsetX,
-      scaledY: e.offsetY
+      originalY: Math.round(yRatio * this.originalImageHeight)
     };
     this.points_.push(pointsData);
 
@@ -223,7 +228,36 @@ Mapper.prototype.clickListener_ = function(e) {
     path.fill('yellow');
     acgraph.vector.primitives.diamond(path, e.offsetX, e.offsetY, 5);
     this.pathPoints_.push(path);
-    this.refreshPreview_();
+    path['mapper_data'] = pointsData;
+    path['mapper_index'] = pointsData.pointIndex;
+
+    path.drag(this.stageBounds_);
+    path.listen('drag', function() {
+      var x = path.getX() + 5; //5 is diamond radius.
+      var y = path.getY() + 5; //5 is diamond radius.
+
+      var xRatio = x / this.stageBounds_.width;
+      var yRatio = y / this.stageBounds_.height;
+      var data = path['mapper_data'];
+
+      data.xRatio = xRatio;
+      data.yRatio = yRatio;
+      data.originalX = Math.round(xRatio * this.originalImageWidth);
+      data.originalY = Math.round(yRatio * this.originalImageHeight);
+
+      this.refreshPreview();
+      this.refreshZoomPreview();
+      this.refreshZoomPoints();
+    }, false, this);
+
+    path.listen('dblclick', function() {
+      console.log(path['mapper_index']);
+    }, false, this);
+
+
+    this.refreshPreview();
+    this.refreshZoomPreview();
+    this.refreshZoomPoints();
   } else {
     //console.log('ZOOMING CLICK');
   }
@@ -232,10 +266,11 @@ Mapper.prototype.clickListener_ = function(e) {
 
 Mapper.prototype.mouseDownListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
+    e.preventDefault();
+
     this.zooming_ = true;
     this.startX_ = e.offsetX;
     this.startY_ = e.offsetY;
-    this.zoomingPath_.parent(this.drawLayer_);
     this.zoomingPath_.clear();
     this.zoomingPath_.zIndex(1e10);
     document.body.style.cursor = 'crosshair';
@@ -246,53 +281,52 @@ Mapper.prototype.mouseDownListener_ = function(e) {
 Mapper.prototype.mouseUpListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
     this.zooming_ = false;
+    e.preventDefault();
 
     var minX = Math.min(this.startX_, e.offsetX);
     var minY = Math.min(this.startY_, e.offsetY);
     var maxX = Math.max(this.startX_, e.offsetX);
-    var maxY = Math.max(this.startY_, e.offsetY);
 
-    var widthRatio = (maxX - minX) / this.stageBounds_.width;
-    var heightRatio = (maxY - minY) / this.stageBounds_.height;
+    var selectedAreaWidth = maxX - minX;
+    var widthRatio = selectedAreaWidth / this.stageBounds_.width;
+
+    var domInageRatio = this.domImageWidth / this.domImageHeight;
+    var zoomImageWrapperWidth = this.zoomImgWrapper.width();
+    this.zoomImgWidth = Math.round(zoomImageWrapperWidth / widthRatio);
+    this.zoomImgHeight = Math.round(this.zoomImgWidth / domInageRatio);
 
     var leftRatio = minX / this.stageBounds_.width;
     var topRatio = minY / this.stageBounds_.height;
 
-    var zoomImageWrapperWidth = this.zoomImgWrapper.width();
-    var zoomImageWrapperHeight = this.zoomImgWrapper.height();
-
-    var zoomImgWidth = Math.round(zoomImageWrapperWidth / widthRatio);
-    var rat = zoomImgWidth / this.domImageWidth;
-
-    // var zoomImgHeight = Math.round(this.originalImageHeight / widthRatio); //Yes, here we divide on widthRatio to save image proportions.
-    var zoomImgHeight = Math.round(this.originalImageHeight * rat);
-    var zoomImgLeftOffset = -leftRatio * zoomImgWidth;
-
-    var zoomImgTopOffset = -topRatio * zoomImgHeight;
+    this.zoomImgLeftOffset = -leftRatio * this.zoomImgWidth;
+    this.zoomImgTopOffset = -topRatio * this.zoomImgHeight;
 
     this.zoomImgWrapper.empty();
     var newZoomImg = $('<img/>');
     newZoomImg
         .attr('src', this.imgUrl_)
-        .css('width', zoomImgWidth + 'px')
-        .css('height', zoomImgHeight + 'px')
-        .css('margin-left', zoomImgLeftOffset + 'px')
-        .css('margin-top', zoomImgTopOffset + 'px');
+        .css('width', this.zoomImgWidth + 'px')
+        .css('height', this.zoomImgHeight + 'px')
+        .css('margin-left', this.zoomImgLeftOffset + 'px')
+        .css('margin-top', this.zoomImgTopOffset + 'px');
 
     this.zoomImgWrapper.append(newZoomImg);
 
-    this.zoomingPath_.remove();
     this.zoomingPath_.clear();
     this.startX_ = NaN;
     this.startY_ = NaN;
     document.body.style.cursor = 'auto';
+
+    this.initZoomStage();
+    this.refreshZoomPreview();
+    this.refreshZoomPoints();
   }
 };
 
 
 Mapper.prototype.mouseMoveListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
-
+    e.preventDefault();
     if (this.zooming_) {
       this.zoomingPath_.clear();
       this.zoomingPath_
@@ -306,7 +340,7 @@ Mapper.prototype.mouseMoveListener_ = function(e) {
 };
 
 
-Mapper.prototype.refreshPreview_ = function() {
+Mapper.prototype.refreshPreview = function() {
   this.previewContour_.clear();
   for (var i = 0; i < this.points_.length; i++) {
     var point = this.points_[i];
@@ -321,6 +355,113 @@ Mapper.prototype.refreshPreview_ = function() {
   if (this.points_.length > 2)
     this.previewContour_.close();
 };
+
+
+Mapper.prototype.initZoomStage = function() {
+  if (!this.zoomStage_) {
+    this.zoomStage_ = acgraph.create(this.zoomDrawContainer_);
+    this.zoomDrawLayer_ = this.zoomStage_.layer();
+    this.zoomPreviewContour_ = this.zoomDrawLayer_.path();
+    this.zoomPreviewContour_.stroke({dash: '5 3', color: 'red'});
+    this.zoomPreviewContour_.zIndex(-10);
+  }
+};
+
+
+Mapper.prototype.refreshPoints = function() {
+  for (var i = 0; i < this.points_.length; i++) {
+    var point = this.points_[i];
+    var left = this.stageBounds_.width * point.xRatio;
+    var top = this.stageBounds_.height * point.yRatio;
+    var path = this.pathPoints_[i];
+    if (path) {
+      path.clear();
+      path.setTransformationMatrix(1, 0, 0, 1, 0, 0);
+      acgraph.vector.primitives.diamond(path, left, top, 5);
+    }
+  }
+};
+
+
+Mapper.prototype.refreshZoomPreview = function() {
+  if (this.zoomStage_) {
+    this.zoomPreviewContour_.clear();
+    for (var i = 0; i < this.points_.length; i++) {
+      var point = this.points_[i];
+      var left = this.zoomImgWidth * point.xRatio + this.zoomImgLeftOffset;
+      var top = this.zoomImgHeight * point.yRatio + this.zoomImgTopOffset;
+      if (i == 0) {
+        this.zoomPreviewContour_.moveTo(left, top);
+      } else {
+        this.zoomPreviewContour_.lineTo(left, top);
+      }
+    }
+    if (this.points_.length > 2)
+      this.zoomPreviewContour_.close();
+
+  }
+};
+
+
+Mapper.prototype.refreshZoomPoints = function(opt_exceptIndex) {
+  if (this.zoomStage_) {
+    for (var i = 0; i < this.points_.length; i++) {
+      var point = this.points_[i];
+      var left = this.zoomImgWidth * point.xRatio + this.zoomImgLeftOffset;
+      var top = this.zoomImgHeight * point.yRatio + this.zoomImgTopOffset;
+
+      var pointPath;
+      if (this.zoomPathPoints_[i]) {
+        pointPath = this.zoomPathPoints_[i];
+      } else {
+        pointPath = this.zoomDrawLayer_.path();
+        pointPath.fill('yellow');
+        this.zoomPathPoints_.push(pointPath);
+
+        var bounds = this.zoomStage_.getBounds();
+        pointPath['mapper_data'] = point;
+        pointPath.drag(bounds);
+
+        pointPath.listen('drag', this.getClosureHandler_(pointPath, this), false, this);
+
+        // pointPath.listen('end', function() {
+        //   this.refreshZoomPoints();
+        // }, false, this);
+      }
+
+      pointPath.clear();
+      pointPath.setTransformationMatrix(1, 0, 0, 1, 0, 0);
+      acgraph.vector.primitives.diamond(pointPath, left, top, 5);
+    }
+  }
+};
+
+Mapper.prototype.getClosureHandler_ = function(pointPath, context) {
+  return function() {
+    var x = pointPath.getX() + 5; //5 is diamond radius.
+    var y = pointPath.getY() + 5; //5 is diamond radius.
+
+    var xRatio = (x - context.zoomImgLeftOffset) / context.zoomImgWidth;
+    var yRatio = (y - context.zoomImgTopOffset) / context.zoomImgHeight;
+    var data = pointPath['mapper_data'];
+
+    data.xRatio = xRatio;
+    data.yRatio = yRatio;
+    data.originalX = Math.round(xRatio * context.originalImageWidth);
+    data.originalY = Math.round(yRatio * context.originalImageHeight);
+
+    context.refreshPreview();
+    context.refreshPoints();
+    context.refreshZoomPreview();
+  }
+};
+
+
+Mapper.prototype.getPointsData = function() {
+  return this.points_;
+};
+
+
 
 
 
