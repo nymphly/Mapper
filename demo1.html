@@ -62,7 +62,9 @@
         </label>
 
     </div>
-    <button type="button" class="btn btn-success" id="getData" data-toggle="modal" data-target="#myModal">Получить данные точек (в консоль браузера)</button>
+    <button type="button" class="btn btn-success" id="getData" data-toggle="modal" data-target="#myModal">Получить
+        данные точек (в консоль браузера)
+    </button>
 
 </div>
 
@@ -94,7 +96,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                Вы можете увидеть их в консои браузера!
+                Вы можете увидеть их в консоли браузера!
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
@@ -105,22 +107,31 @@
 
 
 <script>
-      var mapper = new Mapper('map.png', 'imgContainer', 'interactiveContainer', 'zoomImgContainer', 'zoomInteractiveContainer');
-      mapper.load(function() {
-        $('#addPoints').change(function() {
-          mapper.addPoints(true);
-        });
+  var mapper = new Mapper('map.png', 'imgContainer', 'interactiveContainer', 'zoomImgContainer', 'zoomInteractiveContainer');
+  mapper.load(function() {
+    $('#addPoints').change(function() {
+      mapper.addPoints(true);
+    });
 
-        $('#scalePoints').change(function() {
-          mapper.addPoints(false);
-        });
+    $('#scalePoints').change(function() {
+      mapper.addPoints(false);
+    });
 
-        $('#getData').click(function() {
+    $('#getData').click(function() {
+      /*
 
-          console.log(mapper.getPointsData());
-          $(".alert").alert();
-        });
+      $.ajax({
+        url: "/1.php", //адрес,куда мы хотим отправить данные точек.
+        type: "POST", //метод отправки.
+        data: {myPoints: mapper.getPointsData()} //отправляемые данные. На сервер уйдет объект, содержащий поле myPoints, в котором будет массив пользовательских точек
       });
+
+      */
+
+      console.log(mapper.getPointsData());
+      $(".alert").alert();
+    });
+  });
 </script>
 
 </body>

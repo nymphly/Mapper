@@ -1,10 +1,10 @@
 /**
- * Mapper class.
- * @param {string} url - Image load url.
- * @param {string|Element} imgContainer - Image container ID or element itself.
- * @param {string|Element} drawContainer - GraphicsJS draw container or element.
- * @param {string|Element} zoomImgContainer - Image zoom container or element.
- * @param {string|Element} zoomDrawContainer - GraphicsJS zoom container or element.
+ * Главный класс, занимающийся реализацией задачи.
+ * @param {string} url - URL картинки, по которой будет чериться контур.
+ * @param {string|Element} imgContainer - Элемент или ID элемента, в который будет встроена картинка.
+ * @param {string|Element} drawContainer - Элемент или ID элемента, для рисования GraphicsJS.
+ * @param {string|Element} zoomImgContainer - Элемент или ID элемента, в который будет встроена масштабированная картинка.
+ * @param {string|Element} zoomDrawContainer - Элемент или ID элемента, для рисования масшабированных точек GraphicsJS.
  * @constructor
  */
 Mapper = function(url, imgContainer, drawContainer, zoomImgContainer, zoomDrawContainer) {
@@ -39,25 +39,25 @@ Mapper = function(url, imgContainer, drawContainer, zoomImgContainer, zoomDrawCo
   this.zoomDrawContainer_ = Mapper.isString(zoomDrawContainer) ? document.getElementById(zoomDrawContainer) : zoomDrawContainer;
 
   /**
-   * Calculated image width.
+   * Оригинальная высота картинки.
    * @type {number}
    */
   this.originalImageHeight = NaN;
 
   /**
-   * Calculated image width.
+   * Оригинальная ширина картинки.
    * @type {number}
    */
   this.originalImageWidth = NaN;
 
   /**
-   * DOM image height.
+   * Высота картинки в DOM.
    * @type {number}
    */
   this.domImageHeight = NaN;
 
   /**
-   * DOM image width.
+   * Ширина картинки в DOM.
    * @type {number}
    */
   this.domImageWidth = NaN;
@@ -132,14 +132,14 @@ Mapper = function(url, imgContainer, drawContainer, zoomImgContainer, zoomDrawCo
   this.interactivityHandler_ = null;
 
   /**
-   * Edit mode: adding points or scaling.
+   * Режим добаления точек (если true) или режим масштабирования (если false).
    * @type {boolean}
    * @private
    */
   this.addPoints_ = true;
 
   /**
-   * Zooming mode. If dragging.
+   * Флаг, происходит ли перетаскивание мышью. Режим масштабирования.
    * @type {boolean}
    * @private
    */
@@ -149,9 +149,8 @@ Mapper = function(url, imgContainer, drawContainer, zoomImgContainer, zoomDrawCo
 
 
 /**
- * Returns true if the specified value is a string.
- * @param {*} val - Variable to test.
- * @return {boolean} - Whether variable is a string.
+ * @param {*} val - Тестируемое значение.
+ * @return {boolean} - Является ли переменная строкойй.
  */
 Mapper.isString = function(val) {
   return typeof val == 'string';
@@ -159,14 +158,13 @@ Mapper.isString = function(val) {
 
 
 /**
- * Map image load callback.
- * @param callback
+ * Загружает картинку,определяет ее фактические размеры и вызывает функцию-callback.
+ * @param {Function} callback - Функция, вызываемая при загрузке изображения.
  */
 Mapper.prototype.load = function(callback) {
   var ths = this;
   var img = $('<img style="width: 100%"/>');
   ths.imgWrapper.append(img);
-  //863 x 593
   img.one('load', function() {
     ths.originalImageHeight = this.naturalHeight;
     ths.originalImageWidth = this.naturalWidth;
@@ -185,10 +183,19 @@ Mapper.prototype.load = function(callback) {
 };
 
 
+/**
+ *
+ * @param {boolean} val - Флаг, указывающий, в каком режиме мы находимся - добавления точек (true) или масштабирования (false).
+ */
 Mapper.prototype.addPoints = function(val) {
   this.addPoints_ = val;
 };
 
+
+/**
+ * Инициализирует работу с GraphicsJS.
+ * @private
+ */
 Mapper.prototype.initGraphics_ = function() {
   this.stage_ = acgraph.create(this.drawContainer_);
   this.stageBounds_ = this.stage_.getBounds();
@@ -211,6 +218,12 @@ Mapper.prototype.initGraphics_ = function() {
   this.previewContour_.zIndex(-10);
 };
 
+
+/**
+ * Обработчик клика по элементам GraphicsJS.
+ * @param {Event} e
+ * @private
+ */
 Mapper.prototype.clickListener_ = function(e) {
   if (this.addPoints_) { //Adding points
     var xRatio = e.offsetX / this.stageBounds_.width;
@@ -264,6 +277,11 @@ Mapper.prototype.clickListener_ = function(e) {
 };
 
 
+/**
+ * Обработчик mousedown по элементам GraphicsJS.
+ * @param {Event} e
+ * @private
+ */
 Mapper.prototype.mouseDownListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
     e.preventDefault();
@@ -278,6 +296,11 @@ Mapper.prototype.mouseDownListener_ = function(e) {
 };
 
 
+/**
+ * Обработчик mouseup по элементам GraphicsJS.
+ * @param {Event} e
+ * @private
+ */
 Mapper.prototype.mouseUpListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
     this.zooming_ = false;
@@ -324,6 +347,11 @@ Mapper.prototype.mouseUpListener_ = function(e) {
 };
 
 
+/**
+ * Обработчик движения мыши по элементам GraphicsJS.
+ * @param {Event} e
+ * @private
+ */
 Mapper.prototype.mouseMoveListener_ = function(e) {
   if (!this.addPoints_) { //Zooming
     e.preventDefault();
@@ -340,6 +368,9 @@ Mapper.prototype.mouseMoveListener_ = function(e) {
 };
 
 
+/**
+ * Перерисовка контура соединенных точек.
+ */
 Mapper.prototype.refreshPreview = function() {
   this.previewContour_.clear();
   for (var i = 0; i < this.points_.length; i++) {
@@ -357,6 +388,9 @@ Mapper.prototype.refreshPreview = function() {
 };
 
 
+/**
+ * Инициализация GraphicsJS на масштабированной картинке.
+ */
 Mapper.prototype.initZoomStage = function() {
   if (!this.zoomStage_) {
     this.zoomStage_ = acgraph.create(this.zoomDrawContainer_);
@@ -368,6 +402,9 @@ Mapper.prototype.initZoomStage = function() {
 };
 
 
+/**
+ * Перерисовка точек на основной картинке при резактировании точек из масшабированного элемента.
+ */
 Mapper.prototype.refreshPoints = function() {
   for (var i = 0; i < this.points_.length; i++) {
     var point = this.points_[i];
@@ -383,6 +420,9 @@ Mapper.prototype.refreshPoints = function() {
 };
 
 
+/**
+ * Перерисовка контура, соединяющего точки на масшабированной картинке.
+ */
 Mapper.prototype.refreshZoomPreview = function() {
   if (this.zoomStage_) {
     this.zoomPreviewContour_.clear();
@@ -403,7 +443,10 @@ Mapper.prototype.refreshZoomPreview = function() {
 };
 
 
-Mapper.prototype.refreshZoomPoints = function(opt_exceptIndex) {
+/**
+ * Перерисовка точек на масштабированной картинке.
+ */
+Mapper.prototype.refreshZoomPoints = function() {
   if (this.zoomStage_) {
     for (var i = 0; i < this.points_.length; i++) {
       var point = this.points_[i];
@@ -436,6 +479,14 @@ Mapper.prototype.refreshZoomPoints = function(opt_exceptIndex) {
   }
 };
 
+
+/**
+ * Получает изолированную функцию-обработчик события drag.
+ * @param {acgraph.vector.Path} pointPath - Path-элемент точки.
+ * @param {Mapper} context - Экземпляр Mapper, являющийся контекстом для обработчика.
+ * @return {Function} - Обработчик события drag.
+ * @private
+ */
 Mapper.prototype.getClosureHandler_ = function(pointPath, context) {
   return function() {
     var x = pointPath.getX() + 5; //5 is diamond radius.
@@ -457,6 +508,10 @@ Mapper.prototype.getClosureHandler_ = function(pointPath, context) {
 };
 
 
+/**
+ * Внешний метод, возвращающий точки, созданные пользователем.
+ * @return {Array.<Object>}
+ */
 Mapper.prototype.getPointsData = function() {
   return this.points_;
 };
