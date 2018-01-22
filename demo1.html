@@ -62,8 +62,12 @@
         </label>
 
     </div>
-    <button type="button" class="btn btn-success" id="getData" data-toggle="modal" data-target="#myModal">Получить
-        данные точек (в консоль браузера)
+    <!-- <button type="button" class="btn btn-success" id="getData" data-toggle="modal" data-target="#myModal">Получить
+         данные точек (в консоль браузера)
+     </button> -->
+
+    <button type="button" class="btn btn-success" id="getData">Получить
+        данные точек
     </button>
 
 </div>
@@ -86,6 +90,7 @@
     </div>
 </div>
 
+<!--
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -104,9 +109,32 @@
         </div>
     </div>
 </div>
+-->
 
 
 <script>
+  $.extend(
+      {
+        redirectPost: function(location, args)
+        {
+          var form = $('<form></form>');
+          form.attr("method", "post");
+          form.attr("action", location);
+
+          $.each( args, function( key, value ) {
+            var field = $('<input></input>');
+
+            field.attr("type", "hidden");
+            field.attr("name", key);
+            field.attr("value", JSON.stringify(value));
+
+            form.append(field);
+          });
+          $(form).appendTo('body').submit();
+        }
+      });
+
+
   var mapper = new Mapper('map.png', 'imgContainer', 'interactiveContainer', 'zoomImgContainer', 'zoomInteractiveContainer');
   mapper.load(function() {
     $('#addPoints').change(function() {
@@ -128,8 +156,11 @@
 
       */
 
-      console.log(mapper.getPointsData());
-      $(".alert").alert();
+      //console.log(mapper.getPointsData());
+      //$(".alert").alert();
+
+      $.redirectPost('1.php', {myPoints: mapper.getPointsData()});
+
     });
   });
 </script>
